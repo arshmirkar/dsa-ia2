@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgriQuad Spatial & Irrigation Advisory System (dsaia2.c)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom scrollbars for sleek telemetry look */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    input[type="range"] {
+      accent-color: #10b981;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
+
+  <!-- TOP NAVIGATION & KPI HEADER -->
+  <header class="border-b border-slate-800/80 bg-slate-900/80 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-[1600px] mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-4">
+      <!-- Brand Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-950/60">
+          <i data-lucide="layers" class="w-5 h-5 text-slate-950 stroke-[2.5]"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white">
+              AgriQuad Spatial &amp; Irrigation Advisory System
+            </h1>
+            <span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              dsaia2.c
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">
+            Interactive Quad-Tree Spatial Indexing, Range Search &amp; Priority Queue Telemetry
+          </p>
+        </div>
+      </div>
+
+      <!-- Live System KPI Pills & Quick Actions -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/70 flex items-center gap-2 text-xs">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span class="text-slate-400">Plots:</span>
+          <span id="kpi-plots" class="font-mono font-bold text-white">3</span>
+        </div>
+
+        <div class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/70 flex items-center gap-2 text-xs">
+          <i data-lucide="git-branch" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span class="text-slate-400">QuadNodes:</span>
+          <span id="kpi-nodes" class="font-mono font-bold text-white">9</span>
+          <span id="kpi-depth" class="text-[10px] font-mono text-slate-400">(D:2)</span>
+        </div>
+
+        <div class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/70 flex items-center gap-2 text-xs">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="text-slate-400">In Range:</span>
+          <span id="kpi-in-range" class="font-mono font-bold text-amber-300">2</span>
+        </div>
+
+        <div class="px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700/70 flex items-center gap-2 text-xs">
+          <i data-lucide="droplets" class="w-3.5 h-3.5 text-rose-400"></i>
+          <span class="text-slate-400">Queue Size:</span>
+          <span id="kpi-queue" class="font-mono font-bold text-rose-300">2</span>
+        </div>
+
+        <button
+          onclick="handleAddRandomPlot()"
+          class="px-3 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Insert 1 Random FarmPlot with a Random Irrigation Priority Level (1-10)"
+        >
+          <i data-lucide="dices" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>+1 Random Plot &amp; Priority</span>
+        </button>
+
+        <button
+          onclick="handleResetToMain()"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Reset to initial main() state in dsaia2.c"
+        >
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Reset main()</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT GRID -->
+  <main class="max-w-[1600px] w-full mx-auto px-4 sm:px-6 py-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+    <!-- LEFT / CENTER COLUMN: 2D SPATIAL QUAD-TREE MAP + BOTTOM INSPECTOR (7 cols on lg) -->
+    <div class="lg:col-span-7 flex flex-col gap-5">
+
+      <!-- 2D Spatial Quad-Tree Map Card -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col">
+        <!-- Map Header & Click Mode Switcher -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
+                <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400"></i>
+                2D Spatial Quad-Tree Map (0.0 – 100.0)
+              </h2>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                Center(50, 50) • halfDim: 50
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Subdivides into NW, NE, SW, SE quadrants whenever 2+ plots occupy the same leaf node.
+            </p>
+          </div>
+
+          <!-- Click Mode Toggle -->
+          <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <button
+              id="mode-insert-btn"
+              onclick="setCanvasClickMode('insert')"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              Click to Insert Plot
+            </button>
+            <button
+              id="mode-search-btn"
+              onclick="setCanvasClickMode('search')"
+              class="px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent"
+            >
+              <i data-lucide="search" class="w-3.5 h-3.5"></i>
+              Click to Move Search Area
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive SVG Map Container -->
+        <div class="relative w-full aspect-square max-h-[520px] mx-auto bg-slate-950 rounded-xl border border-slate-800 overflow-hidden shadow-inner">
+          <svg
+            id="quadtree-svg"
+            viewBox="0 0 100 100"
+            class="w-full h-full cursor-crosshair select-none"
+          >
+            <defs>
+              <pattern id="minorGrid" width="5" height="5" patternUnits="userSpaceOnUse">
+                <path d="M 5 0 L 0 0 0 5" fill="none" stroke="rgba(148, 163, 184, 0.05)" stroke-width="0.15" />
+              </pattern>
+              <pattern id="majorGrid" width="25" height="25" patternUnits="userSpaceOnUse">
+                <rect width="25" height="25" fill="url(#minorGrid)" />
+                <path d="M 25 0 L 0 0 0 25" fill="none" stroke="rgba(148, 163, 184, 0.11)" stroke-width="0.25" />
+              </pattern>
+            </defs>
+
+            <!-- Background Grid -->
+            <rect x="0" y="0" width="100" height="100" fill="url(#majorGrid)" />
+
+            <!-- Dynamic Layer: QuadNode Boundaries -->
+            <g id="svg-quadnodes-layer"></g>
+
+            <!-- Dynamic Layer: Search Boundary Box -->
+            <g id="svg-search-layer"></g>
+
+            <!-- Dynamic Layer: Farm Plots -->
+            <g id="svg-plots-layer"></g>
+
+            <!-- Coordinate Corner Labels -->
+            <text x="1" y="99" font-size="2.2" fill="#64748b" font-family="monospace">(0,0)</text>
+            <text x="89" y="99" font-size="2.2" fill="#64748b" font-family="monospace">(100,0)</text>
+            <text x="1" y="3" font-size="2.2" fill="#64748b" font-family="monospace">(0,100)</text>
+            <text x="86" y="3" font-size="2.2" fill="#64748b" font-family="monospace">(100,100)</text>
+          </svg>
+
+          <!-- Floating Cursor Coordinates Pill -->
+          <div
+            id="cursor-coords-pill"
+            class="hidden absolute top-3 right-3 pointer-events-none px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-700 text-[11px] font-mono text-slate-200 shadow-lg"
+          >
+            Cursor: X=50.0, Y=50.0
+          </div>
+        </div>
+
+        <!-- Map Legend & Layer Toggles -->
+        <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="flex items-center gap-1.5 text-slate-300">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+              Healthy / Low Stress
+            </span>
+            <span class="flex items-center gap-1.5 text-slate-300">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+              Moderate Stress (U:5–7)
+            </span>
+            <span class="flex items-center gap-1.5 text-slate-300">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block"></span>
+              High Stress (U:8–10)
+            </span>
+            <span class="flex items-center gap-1.5 text-amber-300">
+              <span class="w-2.5 h-2.5 rounded-full border border-amber-400 border-dashed inline-block"></span>
+              Matched in Search
+            </span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer select-none">
+              <input
+                id="toggle-search-overlay"
+                type="checkbox"
+                checked
+                onchange="renderAll()"
+                class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-0"
+              />
+              <span>Search Box</span>
+            </label>
+            <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer select-none">
+              <input
+                id="toggle-visited-cells"
+                type="checkbox"
+                checked
+                onchange="renderAll()"
+                class="rounded border-slate-700 bg-slate-800 text-amber-500 focus:ring-0"
+              />
+              <span>Visited QuadNodes</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM INSPECTOR TABS: CONSOLE / TREE / PRESENTATION SCRIPT / C CODE -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex-1 flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-slate-950/70 border-b border-slate-800">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <button
+              id="tab-btn-console"
+              onclick="setBottomTab('console')"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+            >
+              <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+              Live C Console (stdout)
+            </button>
+            <button
+              id="tab-btn-tree"
+              onclick="setBottomTab('tree')"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent"
+            >
+              <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
+              QuadNode Hierarchy (<span id="tab-tree-count">9</span>)
+            </button>
+            <button
+              id="tab-btn-script"
+              onclick="setBottomTab('script')"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent"
+            >
+              <i data-lucide="presentation" class="w-3.5 h-3.5"></i>
+              Presentation Script (3 Speakers)
+            </button>
+            <button
+              id="tab-btn-code"
+              onclick="setBottomTab('code')"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent"
+            >
+              <i data-lucide="code-2" class="w-3.5 h-3.5"></i>
+              dsaia2.c Source
+            </button>
+          </div>
+
+          <button
+            id="clear-console-btn"
+            onclick="clearConsoleLogs()"
+            class="text-[11px] text-slate-400 hover:text-slate-200 font-mono px-2 py-1 rounded hover:bg-slate-800 cursor-pointer"
+          >
+            Clear Output
+          </button>
+        </div>
+
+        <!-- Tab Content Container -->
+        <div class="p-4 max-h-80 overflow-y-auto text-xs">
+          <!-- TAB 1: LIVE C CONSOLE -->
+          <div id="tab-panel-console" class="font-mono space-y-1.5"></div>
+
+          <!-- TAB 2: QUADNODE HIERARCHY TREE -->
+          <div id="tab-panel-tree" class="hidden">
+            <div class="mb-2 text-[11px] text-slate-400 flex flex-wrap items-center justify-between gap-2">
+              <span>Recursive QuadNode pointer structure (<code class="text-sky-300">NW, NE, SW, SE</code>):</span>
+              <span id="tree-visited-summary" class="text-amber-300 font-mono"></span>
+            </div>
+            <div id="tree-hierarchy-container" class="space-y-0.5"></div>
+          </div>
+
+          <!-- TAB 3: PRESENTATION SCRIPT (SPEAKER 1, 2, 3) -->
+          <div id="tab-panel-script" class="hidden space-y-4 text-slate-200 leading-relaxed">
+            <div class="p-3.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <span class="font-bold text-emerald-300 text-xs uppercase tracking-wider">
+                  Speaker 1 — Core Setup &amp; Quad-Tree Insertion (Person 2's Part)
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="handleResetToMain()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-emerald-300 border border-slate-700 cursor-pointer">
+                    1. Reset main()
+                  </button>
+                  <button onclick="handleAddBatchRandomPlots(5)" class="px-2 py-1 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-[11px] font-mono text-emerald-200 border border-emerald-500/40 cursor-pointer">
+                    2. Run +5 Batch Demo
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">
+                "Hello everyone. Today we are presenting our <strong>Smart Agriculture Spatial Indexing &amp; Irrigation Advisory System</strong> written in C (<code class="text-emerald-300">dsaia2.c</code>). I implemented the <strong>Quad-Tree spatial data structure and plot insertion</strong> (<code class="text-emerald-300">QuadNode</code>, <code class="text-emerald-300">Boundary</code>, and <code class="text-emerald-300">insert_plot</code>). We initialize our map centered at <code>(50, 50)</code> with <code>halfDim = 50</code>, covering <code>0 to 100</code>. When a plot is inserted into an empty leaf node (<code>hasPlot == 0 &amp;&amp; NW == NULL</code>), it is stored directly. As soon as a second plot enters the same region—like Plots <code>1001</code> and <code>1003</code> in the Southwest quadrant—the node subdivides its <code>halfDim</code> by <code>2.0</code> into 4 child quadrants (<code>NW, NE, SW, SE</code>) and pushes the plots down recursively."
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/30">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <span class="font-bold text-amber-300 text-xs uppercase tracking-wider">
+                  Speaker 2 — Spatial Region Search &amp; Pruning (Person 3's Part)
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="applySearchPreset(25, 25, 25); handleLogSpatialSearch();" class="px-2 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-[11px] font-mono text-amber-200 border border-amber-500/40 cursor-pointer">
+                    Search SW Quadrant &amp; Log
+                  </button>
+                  <button onclick="applySearchPreset(75, 75, 25); handleLogSpatialSearch();" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-amber-300 border border-slate-700 cursor-pointer">
+                    Search NE Quadrant
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">
+                "Thank you. I implemented the <strong>Spatial Region Search</strong> (<code class="text-amber-300">intersect</code> and <code class="text-amber-300">search_region</code>). Instead of scanning every farm plot in a flat list ($O(N)$), our <code class="text-amber-300">search_region()</code> function checks whether a quadrant's boundary overlaps the target <code class="text-amber-300">searchArea</code> using <code class="text-amber-300">intersect()</code>. If a quadrant does not intersect, the entire subtree is pruned immediately. On the dashboard, you can see the exact count of <strong>Visited vs. Pruned QuadNodes</strong> and watch matching plots highlight in real time."
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-rose-950/30 border border-rose-500/30">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                <span class="font-bold text-rose-300 text-xs uppercase tracking-wider">
+                  Speaker 3 — Priority Queue Irrigation Advisories (Person 1's Part)
+                </span>
+                <div class="flex items-center gap-1.5">
+                  <button onclick="handleRandomizeAllPriorities()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[11px] font-mono text-rose-300 border border-slate-700 cursor-pointer">
+                    1. Shuffle Priorities
+                  </button>
+                  <button onclick="handleDispatchAdvisory()" class="px-2 py-1 rounded bg-rose-500/20 hover:bg-rose-500/30 text-[11px] font-mono text-rose-200 border border-rose-500/40 cursor-pointer">
+                    2. Dispatch Highest
+                  </button>
+                </div>
+              </div>
+              <p class="text-xs text-slate-300">
+                "Finally, I implemented the <strong>Irrigation Advisory Priority Queue</strong> (<code class="text-rose-300">PriorityQueue</code>, <code class="text-rose-300">add_advisory</code>, and <code class="text-rose-300">get_next_advisory</code>). Each farm plot experiencing moisture stress is enqueued with an <code class="text-rose-300">urgency</code> level from <code>1</code> to <code>10</code>. When <code class="text-rose-300">get_next_advisory()</code> is called, it scans <code class="text-rose-300">pq-&gt;queue</code> to find <code class="text-rose-300">maxIdx</code>—the plot with the highest urgency—dispatches water to that plot first, and replaces <code class="text-rose-300">pq-&gt;queue[maxIdx]</code> with the last element <code class="text-rose-300">pq-&gt;queue[pq-&gt;size - 1]</code> for $O(1)$ removal."
+              </p>
+            </div>
+          </div>
+
+          <!-- TAB 4: ORIGINAL C SOURCE CODE -->
+          <div id="tab-panel-code" class="hidden">
+            <pre id="c-source-code-block" class="text-[11px] leading-relaxed font-mono text-slate-300 overflow-x-auto"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: 3 INTERACTIVE MODULES (Person 2, Person 3, Person 1) (5 cols on lg) -->
+    <div class="lg:col-span-5 flex flex-col gap-5">
+
+      <!-- MODULE 1: GEOFENCED PLOT INSERTION (Person 2's part) -->
+      <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">
+                1. Geofenced Plot Insertion
+              </h3>
+              <p class="text-[11px] text-slate-400 font-mono">
+                insert_plot(QuadNode* root, FarmPlot p) • Person 2
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              onclick="handleAddRandomPlot()"
+              class="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+              title="Insert 1 random plot with random (x,y) and random priority (1-10)"
+            >
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              +1 Random
+            </button>
+            <button
+              type="button"
+              onclick="handleAddBatchRandomPlots(5)"
+              class="px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+              title="Batch insert 5 random plots with random priority levels (1-10)"
+            >
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              +5 Batch
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto-assign Priority Level toggle & Roll Inputs -->
+        <div class="mb-3 px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800/80 flex items-center justify-between gap-2">
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+            <input
+              id="auto-advisory-checkbox"
+              type="checkbox"
+              checked
+              onchange="updateInsertButtonLabel()"
+              class="rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring-0"
+            />
+            <span>Auto-enqueue Priority Level (1–10) on Plot Insert</span>
+          </label>
+          <button
+            type="button"
+            onclick="handleRandomizeFormFields()"
+            class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-mono flex items-center gap-1 transition-colors cursor-pointer shrink-0"
+            title="Randomize X, Y, and Urgency input values"
+          >
+            <i data-lucide="dices" class="w-3 h-3 text-emerald-400"></i>
+            Roll Inputs
+          </button>
+        </div>
+
+        <!-- Manual Plot Insertion Form -->
+        <form onsubmit="handleManualInsertSubmit(event)" class="grid grid-cols-4 gap-2 mb-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-mono">plotID</label>
+            <input
+              id="input-plot-id"
+              type="number"
+              value="1004"
+              oninput="updateInsertButtonLabel()"
+              class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-mono">pos.x (0–100)</label>
+            <input
+              id="input-plot-x"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value="65.0"
+              oninput="updateInsertButtonLabel()"
+              class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-mono">pos.y (0–100)</label>
+            <input
+              id="input-plot-y"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              value="35.0"
+              oninput="updateInsertButtonLabel()"
+              class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-emerald-500"
+              required
+            />
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1 font-mono">urgency (1–10)</label>
+            <input
+              id="input-plot-urgency"
+              type="number"
+              min="1"
+              max="10"
+              value="6"
+              oninput="updateInsertButtonLabel()"
+              class="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 disabled:opacity-40 text-xs font-mono text-rose-300 focus:outline-none focus:border-rose-500"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            class="col-span-4 mt-1 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-950/50 transition-all cursor-pointer"
+          >
+            <i data-lucide="plus" class="w-4 h-4 stroke-[2.5]"></i>
+            <span id="insert-submit-btn-text">Insert Plot #1004 (65.0, 35.0) + Priority [U:6]</span>
+          </button>
+        </form>
+
+        <!-- Indexed Farm Plots Pill List -->
+        <div class="pt-2 border-t border-slate-800/80">
+          <div class="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>Indexed Farm Plots (<span id="indexed-plots-count">3</span>):</span>
+            <span class="font-mono text-[10px] text-slate-500">Click to select</span>
+          </div>
+          <div id="indexed-plots-pills" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto"></div>
+        </div>
+      </section>
+
+      <!-- MODULE 2: SPATIAL REGION SEARCH (Person 3's part) -->
+      <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <i data-lucide="search" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">
+                2. Spatial Range Search
+              </h3>
+              <p class="text-[11px] text-slate-400 font-mono">
+                search_region(QuadNode* node, Boundary range) • Person 3
+              </p>
+            </div>
+          </div>
+
+          <button
+            onclick="handleLogSpatialSearch()"
+            class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
+          >
+            <i data-lucide="play" class="w-3 h-3 fill-current"></i>
+            Log printf()
+          </button>
+        </div>
+
+        <!-- Region Presets -->
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          <button onclick="applySearchPreset(25, 25, 25)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            SW Quadrant (Default)
+          </button>
+          <button onclick="applySearchPreset(75, 75, 25)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            NE Quadrant
+          </button>
+          <button onclick="applySearchPreset(25, 75, 25)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            NW Quadrant
+          </button>
+          <button onclick="applySearchPreset(75, 25, 25)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            SE Quadrant
+          </button>
+          <button onclick="applySearchPreset(50, 50, 25)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            Center 50x50
+          </button>
+          <button onclick="applySearchPreset(50, 50, 50)" class="px-2 py-1 rounded-md bg-slate-950 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 font-mono transition-colors cursor-pointer">
+            Full Map
+          </button>
+        </div>
+
+        <!-- Sliders for searchArea.center.x, center.y, halfDim -->
+        <div class="space-y-2 bg-slate-950/70 p-3 rounded-xl border border-slate-800/80 mb-3">
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-slate-400">searchArea.center.x:</span>
+            <span id="label-search-cx" class="text-amber-300 font-bold">25.0</span>
+          </div>
+          <input
+            id="slider-search-cx"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="25"
+            oninput="handleSearchSliderChange()"
+            class="w-full accent-amber-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+          />
+
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-slate-400">searchArea.center.y:</span>
+            <span id="label-search-cy" class="text-amber-300 font-bold">25.0</span>
+          </div>
+          <input
+            id="slider-search-cy"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="25"
+            oninput="handleSearchSliderChange()"
+            class="w-full accent-amber-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+          />
+
+          <div class="flex items-center justify-between text-xs font-mono">
+            <span class="text-slate-400">searchArea.halfDim:</span>
+            <span id="label-search-hd" class="text-amber-300 font-bold">25.0</span>
+          </div>
+          <input
+            id="slider-search-hd"
+            type="range"
+            min="5"
+            max="50"
+            step="1"
+            value="25"
+            oninput="handleSearchSliderChange()"
+            class="w-full accent-amber-400 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+          />
+        </div>
+
+        <!-- Search Results & Pruning Telemetry -->
+        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+          <span>Matched Plots (<span id="search-matched-count">2</span>):</span>
+          <span id="search-pruning-stats" class="font-mono text-emerald-400">Visited 6/9 QuadNodes (3 pruned)</span>
+        </div>
+
+        <div id="search-results-list" class="space-y-1.5 max-h-28 overflow-y-auto"></div>
+      </section>
+
+      <!-- MODULE 3: IRRIGATION ADVISORY PRIORITY QUEUE (Person 1's part) -->
+      <section class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl flex-1 flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+              <i data-lucide="droplets" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">
+                3. Irrigation Advisory Priority Queue
+              </h3>
+              <p class="text-[11px] text-slate-400 font-mono">
+                add_advisory() &amp; get_next_advisory() • Person 1
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              onclick="handleAddRandomAdvisory()"
+              class="px-2 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+              title="Pick a random Plot and enqueue a random Priority Level (1-10)"
+            >
+              <i data-lucide="dices" class="w-3.5 h-3.5"></i>
+              + Random Advisory
+            </button>
+            <button
+              type="button"
+              onclick="handleRandomizeAllPriorities()"
+              class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-medium flex items-center gap-1 transition-colors cursor-pointer"
+              title="Randomize urgency priority levels (1-10) for all plots"
+            >
+              <i data-lucide="shuffle" class="w-3 h-3 text-amber-400"></i>
+              Shuffle All
+            </button>
+            <span id="pq-size-badge" class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300">
+              pq-&gt;size = 2
+            </span>
+          </div>
+        </div>
+
+        <!-- Enqueue & Dispatch Form -->
+        <form onsubmit="handleAddAdvisorySubmit(event)" class="grid grid-cols-12 gap-2.5 mb-3 bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+          <div class="col-span-5">
+            <label class="block text-[11px] text-slate-400 mb-1 font-mono">Target plotID</label>
+            <select
+              id="select-advisory-plot"
+              class="w-full px-2 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs font-mono text-white focus:outline-none focus:border-rose-500"
+            ></select>
+          </div>
+
+          <div class="col-span-7">
+            <div class="flex items-center justify-between text-[11px] font-mono mb-1">
+              <span class="text-slate-400">urgency (1–10):</span>
+              <div class="flex items-center gap-1.5">
+                <span id="label-advisory-urgency" class="font-bold text-amber-400">Level 7</span>
+                <button
+                  type="button"
+                  onclick="rollAdvisoryUrgencySlider()"
+                  class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[10px] flex items-center gap-1 cursor-pointer"
+                >
+                  <i data-lucide="dices" class="w-3 h-3 text-rose-400"></i>
+                  Roll
+                </button>
+              </div>
+            </div>
+            <input
+              id="slider-advisory-urgency"
+              type="range"
+              min="1"
+              max="10"
+              value="7"
+              oninput="updateAdvisoryUrgencyLabel()"
+              class="w-full accent-rose-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer mt-1"
+            />
+          </div>
+
+          <div class="col-span-12 flex gap-2 mt-1">
+            <button
+              type="submit"
+              class="flex-1 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-rose-400"></i>
+              Enqueue (add_advisory)
+            </button>
+
+            <button
+              id="btn-dispatch-advisory"
+              type="button"
+              onclick="handleDispatchAdvisory()"
+              class="flex-1 py-2 px-3 rounded-lg bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-lg shadow-rose-950/50 transition-all cursor-pointer"
+            >
+              <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+              Dispatch Highest (get_next)
+            </button>
+          </div>
+        </form>
+
+        <!-- Last Dispatched Banner -->
+        <div
+          id="last-dispatched-banner"
+          class="hidden mb-3 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 items-center justify-between text-xs"
+        ></div>
+
+        <!-- pq->queue[] Array Inspector -->
+        <div class="flex-1 flex flex-col">
+          <div class="text-[11px] text-slate-400 mb-1.5 flex items-center justify-between font-mono">
+            <span id="pq-array-header">pq-&gt;queue[0..1] Array State:</span>
+            <span id="pq-maxidx-label" class="text-rose-400">maxIdx = 1</span>
+          </div>
+          <div id="pq-array-list" class="space-y-1.5 max-h-44 overflow-y-auto pr-1"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- APPLICATION JAVASCRIPT: EXACT C PORT + INTERACTIVE TELEMETRY -->
+  <script>
+    // ============================================================================
+    // 1. EXACT PORT OF C DATA STRUCTURES & ALGORITHMS FROM dsaia2.c
+    // ============================================================================
+
+    function inBoundary(p, b) {
+      return (
+        p.x >= b.center.x - b.halfDim &&
+        p.x <= b.center.x + b.halfDim &&
+        p.y >= b.center.y - b.halfDim &&
+        p.y <= b.center.y + b.halfDim
+      );
+    }
+
+    function intersect(b1, b2) {
+      return !(
+        b2.center.x - b2.halfDim > b1.center.x + b1.halfDim ||
+        b2.center.x + b2.halfDim < b1.center.x - b1.halfDim ||
+        b2.center.y - b2.halfDim > b1.center.y + b1.halfDim ||
+        b2.center.y + b2.halfDim < b1.center.y - b1.halfDim
+      );
+    }
+
+    function createNode(boundary, depth = 0, label = 'ROOT') {
+      return {
+        id: `${label}-${boundary.center.x}-${boundary.center.y}-${boundary.halfDim}`,
+        label,
+        depth,
+        boundary: {
+          center: { x: boundary.center.x, y: boundary.center.y },
+          halfDim: boundary.halfDim
+        },
+        plot: null,
+        hasPlot: 0,
+        NW: null,
+        NE: null,
+        SW: null,
+        SE: null
+      };
+    }
+
+    function insertPlot(node, p, maxDepth = 8) {
+      if (!inBoundary(p.pos, node.boundary)) return false;
+
+      // Guard against infinite recursion on identical coordinates
+      if (node.depth >= maxDepth && node.hasPlot === 1) {
+        return false;
+      }
+
+      // If node is empty and has no children, store plot here
+      if (node.hasPlot === 0 && node.NW === null) {
+        node.plot = { plotID: p.plotID, pos: { x: p.pos.x, y: p.pos.y } };
+        node.hasPlot = 1;
+        return true;
+      }
+
+      // Subdivide if not already divided
+      if (node.NW === null) {
+        const hd = node.boundary.halfDim / 2.0;
+        const c = node.boundary.center;
+        node.NW = createNode({ center: { x: c.x - hd, y: c.y + hd }, halfDim: hd }, node.depth + 1, 'NW');
+        node.NE = createNode({ center: { x: c.x + hd, y: c.y + hd }, halfDim: hd }, node.depth + 1, 'NE');
+        node.SW = createNode({ center: { x: c.x - hd, y: c.y - hd }, halfDim: hd }, node.depth + 1, 'SW');
+        node.SE = createNode({ center: { x: c.x + hd, y: c.y - hd }, halfDim: hd }, node.depth + 1, 'SE');
+
+        // Move existing plot to child
+        const oldPlot = node.plot;
+        node.hasPlot = 0;
+        node.plot = null;
+
+        if (oldPlot) {
+          if (!insertPlot(node.NW, oldPlot, maxDepth)) {
+            if (!insertPlot(node.NE, oldPlot, maxDepth)) {
+              if (!insertPlot(node.SW, oldPlot, maxDepth)) {
+                insertPlot(node.SE, oldPlot, maxDepth);
+              }
+            }
+          }
+        }
+      }
+
+      // Insert the new plot into the appropriate child quadrant
+      if (insertPlot(node.NW, p, maxDepth)) return true;
+      if (insertPlot(node.NE, p, maxDepth)) return true;
+      if (insertPlot(node.SW, p, maxDepth)) return true;
+      if (insertPlot(node.SE, p, maxDepth)) return true;
+      return false;
+    }
+
+    function searchRegionDetailed(node, range, results = [], visitedNodes = [], prunedNodes = []) {
+      if (node === null) return { results, visitedNodes, prunedNodes };
+
+      if (!intersect(node.boundary, range)) {
+        prunedNodes.push(node);
+        return { results, visitedNodes, prunedNodes };
+      }
+
+      visitedNodes.push(node);
+
+      if (node.hasPlot && node.plot && inBoundary(node.plot.pos, range)) {
+        results.push(node.plot);
+      }
+
+      searchRegionDetailed(node.NW, range, results, visitedNodes, prunedNodes);
+      searchRegionDetailed(node.NE, range, results, visitedNodes, prunedNodes);
+      searchRegionDetailed(node.SW, range, results, visitedNodes, prunedNodes);
+      searchRegionDetailed(node.SE, range, results, visitedNodes, prunedNodes);
+
+      return { results, visitedNodes, prunedNodes };
+    }
+
+    function flattenQuadTree(node, list = []) {
+      if (!node) return list;
+      list.push(node);
+      flattenQuadTree(node.NW, list);
+      flattenQuadTree(node.NE, list);
+      flattenQuadTree(node.SW, list);
+      flattenQuadTree(node.SE, list);
+      return list;
+    }
+
+    // ============================================================================
+    // 2. APPLICATION STATE
+    // ============================================================================
+    let quadRoot = null;
+    let plots = [];
+    let advisoryQueue = [];
+    let lastDispatched = null;
+    let searchRange = { center: { x: 25.0, y: 25.0 }, halfDim: 25.0 };
+    let canvasClickMode = 'insert'; // 'insert' | 'search'
+    let selectedPlotId = 1003;
+    let bottomTab = 'console';
+    let logs = [];
+    let collapsedTreeNodes = new Set();
+
+    const ORIGINAL_C_SOURCE = `#include <stdio.h>
+#include <stdlib.h>
+
+// --- CORE DATA STRUCTURES ---
+typedef struct { float x, y; } Point;
+typedef struct { Point center; float halfDim; } Boundary;
+typedef struct { int plotID; Point pos; } FarmPlot;
+
+// Priority Queue for Irrigation Advisories
+typedef struct {
+    int plotID;
+    int urgency; // Higher number = higher priority
+} Advisory;
+
+typedef struct {
+    Advisory queue[100];
+    int size;
+} PriorityQueue;
+
+// --- PRIORITY QUEUE OPERATIONS ---
+void add_advisory(PriorityQueue* pq, int plotID, int urgency) {
+    pq->queue[pq->size].plotID = plotID;
+    pq->queue[pq->size].urgency = urgency;
+    pq->size++;
+}
+
+Advisory get_next_advisory(PriorityQueue* pq) {
+    int maxIdx = 0;
+    // Simple linear search to find highest priority for demonstration
+    for(int i = 1; i < pq->size; i++) {
+        if(pq->queue[i].urgency > pq->queue[maxIdx].urgency) {
+            maxIdx = i;
+        }
+    }
+    Advisory highest = pq->queue[maxIdx];
+    pq->queue[maxIdx] = pq->queue[pq->size - 1]; // Replace with last element
+    pq->size--;
+    return highest;
+}
+
+// --- QUAD-TREE STRUCTURE ---
+typedef struct QuadNode {
+    Boundary boundary;
+    FarmPlot plot;
+    int hasPlot; // 0 if empty, 1 if holds a plot
+    struct QuadNode *NW, *NE, *SW, *SE;
+} QuadNode;
+
+QuadNode* create_node(Boundary b) {
+    QuadNode* n = (QuadNode*)malloc(sizeof(QuadNode));
+    n->boundary = b; n->hasPlot = 0;
+    n->NW = n->NE = n->SW = n->SE = NULL;
+    return n;
+}
+
+int in_boundary(Point p, Boundary b) {
+    return (p.x >= b.center.x - b.halfDim && p.x <= b.center.x + b.halfDim &&
+            p.y >= b.center.y - b.halfDim && p.y <= b.center.y + b.halfDim);
+}
+
+// --- QUAD-TREE INSERTION ---
+void insert_plot(QuadNode* node, FarmPlot p) {
+    if (!in_boundary(p.pos, node->boundary)) return; // Plot outside this node
+
+    // If node is empty and has no children, put plot here
+    if (node->hasPlot == 0 && node->NW == NULL) {
+        node->plot = p;
+        node->hasPlot = 1;
+        return;
+    }
+
+    // Subdivide if not already divided
+    if (node->NW == NULL) {
+        float hd = node->boundary.halfDim / 2.0;
+        Point c = node->boundary.center;
+        node->NW = create_node((Boundary){{c.x - hd, c.y + hd}, hd});
+        node->NE = create_node((Boundary){{c.x + hd, c.y + hd}, hd});
+        node->SW = create_node((Boundary){{c.x - hd, c.y - hd}, hd});
+        node.SE = create_node((Boundary){{c.x + hd, c.y - hd}, hd});
+       
+        // Move existing plot to a child
+        node->hasPlot = 0;
+        insert_plot(node->NW, node->plot); insert_plot(node->NE, node->plot);
+        insert_plot(node->SW, node->plot); insert_plot(node->SE, node->plot);
+    }
+
+    // Insert the new plot into the correct child
+    insert_plot(node->NW, p); insert_plot(node->NE, p);
+    insert_plot(node->SW, p); insert_plot(node->SE, p);
+}
+
+// --- QUAD-TREE SEARCH ---
+int intersect(Boundary b1, Boundary b2) {
+    return !(b2.center.x - b2.halfDim > b1.center.x + b1.halfDim ||
+             b2.center.x + b2.halfDim < b1.center.x - b1.halfDim ||
+             b2.center.y - b2.halfDim > b1.center.y + b1.halfDim ||
+             b2.center.y + b2.halfDim < b1.center.y - b1.halfDim);
+}
+
+void search_region(QuadNode* node, Boundary range) {
+    if (node == NULL || !intersect(node->boundary, range)) return;
+
+    // If there is a plot here, check if it falls inside the search range
+    if (node->hasPlot && in_boundary(node->plot.pos, range)) {
+        printf("Found Farm Plot ID: %d at coords (%.1f, %.1f)\\n",
+                node->plot.plotID, node->plot.pos.x, node->plot.pos.y);
+    }
+        
+    // Continue searching children
+    search_region(node->NW, range); search_region(node->NE, range);
+    search_region(node->SW, range); search_region(node->SE, range);
+}`;
+
+    // ============================================================================
+    // 3. INITIALIZATION & HELPERS
+    // ============================================================================
+    function getRandomCoord() {
+      return Number((Math.random() * 92 + 4).toFixed(1));
+    }
+
+    function getRandomUrgency() {
+      return Math.floor(Math.random() * 10) + 1;
+    }
+
+    function appendLog(type, text) {
+      logs.push({ id: Date.now() + Math.random(), type, text });
+      renderConsole();
+    }
+
+    function clearConsoleLogs() {
+      logs = [];
+      renderConsole();
+    }
+
+    function getUrgencyStyle(urgency) {
+      if (!urgency) {
+        return {
+          bg: 'bg-emerald-500',
+          hex: '#10b981',
+          badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+        };
+      }
+      if (urgency >= 8) {
+        return {
+          bg: 'bg-rose-500',
+          hex: '#f43f5e',
+          badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+        };
+      }
+      if (urgency >= 5) {
+        return {
+          bg: 'bg-amber-500',
+          hex: '#f59e0b',
+          badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+        };
+      }
+      return {
+        bg: 'bg-sky-500',
+        hex: '#38bdf8',
+        badge: 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+      };
+    }
+
+    function handleResetToMain() {
+      quadRoot = createNode({ center: { x: 50.0, y: 50.0 }, halfDim: 50.0 }, 0, 'ROOT');
+      plots = [
+        { plotID: 1001, pos: { x: 20.0, y: 20.0 } },
+        { plotID: 1002, pos: { x: 80.0, y: 80.0 } },
+        { plotID: 1003, pos: { x: 25.0, y: 30.0 } }
+      ];
+      plots.forEach((p) => insertPlot(quadRoot, p));
+
+      advisoryQueue = [
+        { plotID: 1001, urgency: 5 },
+        { plotID: 1003, urgency: 9 }
+      ];
+      lastDispatched = null;
+      selectedPlotId = 1003;
+      collapsedTreeNodes.clear();
+
+      searchRange = { center: { x: 25.0, y: 25.0 }, halfDim: 25.0 };
+      document.getElementById('slider-search-cx').value = 25;
+      document.getElementById('slider-search-cy').value = 25;
+      document.getElementById('slider-search-hd').value = 25;
+
+      document.getElementById('input-plot-id').value = 1004;
+      document.getElementById('input-plot-x').value = '65.0';
+      document.getElementById('input-plot-y').value = '35.0';
+      document.getElementById('input-plot-urgency').value = 6;
+
+      logs = [
+        { id: 1, type: 'sys', text: '// Initializing map: Boundary {{50.0, 50.0}, 50.0} (0.0 to 100.0)' },
+        { id: 2, type: 'cmd', text: 'insert_plot(root, (FarmPlot){1001, {20.0, 20.0}});' },
+        { id: 3, type: 'cmd', text: 'insert_plot(root, (FarmPlot){1002, {80.0, 80.0}}); // Triggers ROOT subdivision' },
+        { id: 4, type: 'cmd', text: 'insert_plot(root, (FarmPlot){1003, {25.0, 30.0}}); // Triggers SW subdivision' },
+        { id: 5, type: 'stdout', text: '--- Spatial Search ---' },
+        { id: 6, type: 'stdout', text: 'Searching SW region for plots...' },
+        { id: 7, type: 'stdout', text: 'Found Farm Plot ID: 1001 at coords (20.0, 20.0)' },
+        { id: 8, type: 'stdout', text: 'Found Farm Plot ID: 1003 at coords (25.0, 30.0)' },
+        { id: 9, type: 'stdout', text: '--- Irrigation Advisories ---' },
+        { id: 10, type: 'cmd', text: 'add_advisory(&advisoryQueue, 1001, 5); // Moderate stress' },
+        { id: 11, type: 'cmd', text: 'add_advisory(&advisoryQueue, 1003, 9); // High stress' }
+      ];
+
+      updateInsertButtonLabel();
+      renderAll();
+    }
+
+    // ============================================================================
+    // 4. INTERACTIVE HANDLERS (INSERT, RANDOM, SEARCH, PRIORITY QUEUE)
+    // ============================================================================
+    function insertPlotAndOptionalAdvisory(plotID, x, y, customUrgency = null) {
+      const cleanX = Math.max(0, Math.min(100, Number(parseFloat(x).toFixed(1))));
+      const cleanY = Math.max(0, Math.min(100, Number(parseFloat(y).toFixed(1))));
+      const cleanId = Number(plotID);
+
+      if (plots.some((p) => p.plotID === cleanId)) {
+        appendLog('warn', `// Plot ID ${cleanId} already exists. Please use a unique ID.`);
+        return;
+      }
+
+      const newPlot = { plotID: cleanId, pos: { x: cleanX, y: cleanY } };
+      const inserted = insertPlot(quadRoot, newPlot);
+
+      if (inserted) {
+        plots.push(newPlot);
+        selectedPlotId = cleanId;
+        document.getElementById('input-plot-id').value = cleanId + 1;
+        appendLog('cmd', `insert_plot(root, (FarmPlot){${cleanId}, {${cleanX.toFixed(1)}, ${cleanY.toFixed(1)}}});`);
+
+        const autoAdv = document.getElementById('auto-advisory-checkbox').checked;
+        if (autoAdv || customUrgency !== null) {
+          const urgToUse = customUrgency !== null ? Number(customUrgency) : getRandomUrgency();
+          if (advisoryQueue.length < 100) {
+            advisoryQueue.push({ plotID: cleanId, urgency: urgToUse });
+            document.getElementById('input-plot-urgency').value = urgToUse;
+            appendLog('cmd', `add_advisory(&advisoryQueue, ${cleanId}, ${urgToUse}); // Priority Level: ${urgToUse}/10`);
+          }
+        }
+        updateInsertButtonLabel();
+        renderAll();
+        populateAdvisorySelect(cleanId);
+      } else {
+        appendLog('warn', `// Could not insert Plot ${cleanId} at (${cleanX}, ${cleanY}).`);
+      }
+    }
+
+    function handleManualInsertSubmit(e) {
+      e.preventDefault();
+      const pid = Number(document.getElementById('input-plot-id').value);
+      const px = Number(document.getElementById('input-plot-x').value);
+      const py = Number(document.getElementById('input-plot-y').value);
+      const autoAdv = document.getElementById('auto-advisory-checkbox').checked;
+      const urg = autoAdv ? Number(document.getElementById('input-plot-urgency').value) : null;
+      insertPlotAndOptionalAdvisory(pid, px, py, urg);
+    }
+
+    function handleAddRandomPlot() {
+      const nextId = Math.max(1000, ...plots.map((p) => p.plotID)) + 1;
+      const rx = getRandomCoord();
+      const ry = getRandomCoord();
+      const rUrg = getRandomUrgency();
+
+      document.getElementById('input-plot-x').value = rx.toFixed(1);
+      document.getElementById('input-plot-y').value = ry.toFixed(1);
+      document.getElementById('input-plot-urgency').value = rUrg;
+
+      insertPlotAndOptionalAdvisory(nextId, rx, ry, rUrg);
+    }
+
+    function handleAddBatchRandomPlots(count = 5) {
+      let currentMaxId = Math.max(1000, ...plots.map((p) => p.plotID));
+      appendLog('sys', `// Batch generating ${count} random FarmPlots with random priority levels (1-10)...`);
+
+      for (let i = 0; i < count; i++) {
+        const pid = ++currentMaxId;
+        const rx = getRandomCoord();
+        const ry = getRandomCoord();
+        const rUrg = getRandomUrgency();
+        const candidate = { plotID: pid, pos: { x: rx, y: ry } };
+
+        if (insertPlot(quadRoot, candidate)) {
+          plots.push(candidate);
+          selectedPlotId = pid;
+          logs.push({
+            id: Date.now() + Math.random(),
+            type: 'cmd',
+            text: `insert_plot(root, (FarmPlot){${pid}, {${rx.toFixed(1)}, ${ry.toFixed(1)}}});`
+          });
+
+          if (advisoryQueue.length < 100) {
+            advisoryQueue.push({ plotID: pid, urgency: rUrg });
+            logs.push({
+              id: Date.now() + Math.random(),
+              type: 'cmd',
+              text: `add_advisory(&advisoryQueue, ${pid}, ${rUrg}); // Random Priority: ${rUrg}`
+            });
+          }
+        }
+      }
+
+      document.getElementById('input-plot-id').value = currentMaxId + 1;
+      updateInsertButtonLabel();
+      renderAll();
+      populateAdvisorySelect(selectedPlotId);
+    }
+
+    function handleRandomizeFormFields() {
+      const rx = getRandomCoord();
+      const ry = getRandomCoord();
+      const rUrg = getRandomUrgency();
+      document.getElementById('input-plot-x').value = rx.toFixed(1);
+      document.getElementById('input-plot-y').value = ry.toFixed(1);
+      document.getElementById('input-plot-urgency').value = rUrg;
+      updateInsertButtonLabel();
+    }
+
+    function updateInsertButtonLabel() {
+      const pid = document.getElementById('input-plot-id').value || 1004;
+      const px = Number(document.getElementById('input-plot-x').value || 0).toFixed(1);
+      const py = Number(document.getElementById('input-plot-y').value || 0).toFixed(1);
+      const urg = document.getElementById('input-plot-urgency').value || 5;
+      const autoAdv = document.getElementById('auto-advisory-checkbox').checked;
+      document.getElementById('input-plot-urgency').disabled = !autoAdv;
+      document.getElementById('insert-submit-btn-text').textContent =
+        `Insert Plot #${pid} (${px}, ${py})` + (autoAdv ? ` + Priority [U:${urg}]` : '');
+    }
+
+    function setCanvasClickMode(mode) {
+      canvasClickMode = mode;
+      const insertBtn = document.getElementById('mode-insert-btn');
+      const searchBtn = document.getElementById('mode-search-btn');
+
+      if (mode === 'insert') {
+        insertBtn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm';
+        searchBtn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent';
+      } else {
+        searchBtn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm';
+        insertBtn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent';
+      }
+    }
+
+    function applySearchPreset(cx, cy, hd) {
+      searchRange = { center: { x: cx, y: cy }, halfDim: hd };
+      document.getElementById('slider-search-cx').value = cx;
+      document.getElementById('slider-search-cy').value = cy;
+      document.getElementById('slider-search-hd').value = hd;
+      renderAll();
+    }
+
+    function handleSearchSliderChange() {
+      const cx = Number(document.getElementById('slider-search-cx').value);
+      const cy = Number(document.getElementById('slider-search-cy').value);
+      const hd = Number(document.getElementById('slider-search-hd').value);
+      searchRange = { center: { x: cx, y: cy }, halfDim: hd };
+      renderAll();
+    }
+
+    function handleLogSpatialSearch() {
+      const { center, halfDim } = searchRange;
+      const analysis = searchRegionDetailed(quadRoot, searchRange);
+      appendLog('stdout', '--- Spatial Search ---');
+      appendLog(
+        'cmd',
+        `Boundary searchArea = {{${center.x.toFixed(1)}, ${center.y.toFixed(1)}}, ${halfDim.toFixed(1)}}; search_region(root, searchArea);`
+      );
+      if (analysis.results.length === 0) {
+        appendLog('stdout', '// No FarmPlots found inside region.');
+      } else {
+        analysis.results.forEach((p) => {
+          appendLog(
+            'stdout',
+            `Found Farm Plot ID: ${p.plotID} at coords (${p.pos.x.toFixed(1)}, ${p.pos.y.toFixed(1)})`
+          );
+        });
+      }
+    }
+
+    function updateAdvisoryUrgencyLabel() {
+      const urg = Number(document.getElementById('slider-advisory-urgency').value);
+      const lbl = document.getElementById('label-advisory-urgency');
+      lbl.textContent = `Level ${urg}`;
+      lbl.className = 'font-bold ' + (urg >= 8 ? 'text-rose-400' : urg >= 5 ? 'text-amber-400' : 'text-sky-400');
+    }
+
+    function rollAdvisoryUrgencySlider() {
+      document.getElementById('slider-advisory-urgency').value = getRandomUrgency();
+      updateAdvisoryUrgencyLabel();
+    }
+
+    function handleAddAdvisorySubmit(e) {
+      e.preventDefault();
+      if (advisoryQueue.length >= 100) {
+        appendLog('warn', '// PriorityQueue full (max 100 advisories).');
+        return;
+      }
+      const pid = Number(document.getElementById('select-advisory-plot').value);
+      const urg = Number(document.getElementById('slider-advisory-urgency').value);
+      advisoryQueue.push({ plotID: pid, urgency: urg });
+      appendLog('cmd', `add_advisory(&advisoryQueue, ${pid}, ${urg});`);
+      renderAll();
+    }
+
+    function handleAddRandomAdvisory() {
+      if (plots.length === 0) return;
+      if (advisoryQueue.length >= 100) {
+        appendLog('warn', '// PriorityQueue full (max 100 advisories).');
+        return;
+      }
+      const randomPlot = plots[Math.floor(Math.random() * plots.length)];
+      const rUrg = getRandomUrgency();
+      document.getElementById('select-advisory-plot').value = randomPlot.plotID;
+      document.getElementById('slider-advisory-urgency').value = rUrg;
+      updateAdvisoryUrgencyLabel();
+
+      advisoryQueue.push({ plotID: randomPlot.plotID, urgency: rUrg });
+      appendLog('cmd', `add_advisory(&advisoryQueue, ${randomPlot.plotID}, ${rUrg}); // Random Plot & Priority`);
+      renderAll();
+    }
+
+    function handleRandomizeAllPriorities() {
+      if (plots.length === 0) return;
+      advisoryQueue = plots.slice(0, 100).map((p) => ({
+        plotID: p.plotID,
+        urgency: getRandomUrgency()
+      }));
+      appendLog('sys', `// Randomized irrigation urgency levels (1-10) across all ${advisoryQueue.length} FarmPlots`);
+      renderAll();
+    }
+
+    function handleDispatchAdvisory() {
+      if (advisoryQueue.length === 0) {
+        appendLog('warn', '// PriorityQueue is empty (pq->size == 0). Nothing to dispatch.');
+        return;
+      }
+      // Exact linear scan from get_next_advisory(PriorityQueue* pq)
+      let maxIdx = 0;
+      for (let i = 1; i < advisoryQueue.length; i++) {
+        if (advisoryQueue[i].urgency > advisoryQueue[maxIdx].urgency) {
+          maxIdx = i;
+        }
+      }
+      const highest = advisoryQueue[maxIdx];
+      advisoryQueue[maxIdx] = advisoryQueue[advisoryQueue.length - 1];
+      advisoryQueue.pop();
+
+      lastDispatched = {
+        plotID: highest.plotID,
+        urgency: highest.urgency,
+        timestamp: new Date().toLocaleTimeString()
+      };
+      selectedPlotId = highest.plotID;
+
+      appendLog('cmd', 'Advisory urgent = get_next_advisory(&advisoryQueue);');
+      appendLog(
+        'stdout',
+        `Dispatching highest priority advisory to Plot ID: ${highest.plotID} (Urgency Level: ${highest.urgency})`
+      );
+      renderAll();
+    }
+
+    function selectPlot(plotID) {
+      selectedPlotId = plotID;
+      populateAdvisorySelect(plotID);
+      renderAll();
+    }
+
+    function populateAdvisorySelect(preferredPlotId = null) {
+      const sel = document.getElementById('select-advisory-plot');
+      const currentVal = preferredPlotId !== null ? preferredPlotId : Number(sel.value);
+      sel.innerHTML = plots
+        .map(
+          (p) =>
+            `<option value="${p.plotID}" ${p.plotID === currentVal ? 'selected' : ''}>Plot #${p.plotID} (${p.pos.x.toFixed(0)},${p.pos.y.toFixed(0)})</option>`
+        )
+        .join('');
+    }
+
+    function setBottomTab(tab) {
+      bottomTab = tab;
+      const tabs = ['console', 'tree', 'script', 'code'];
+      tabs.forEach((t) => {
+        const panel = document.getElementById(`tab-panel-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          panel.classList.remove('hidden');
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+        } else {
+          panel.classList.add('hidden');
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer text-slate-400 hover:text-slate-200 border border-transparent';
+        }
+      });
+      document.getElementById('clear-console-btn').style.display = tab === 'console' ? 'block' : 'none';
+    }
+
+    // ============================================================================
+    // 5. RENDERING ENGINE (SVG CANVAS, TREE, QUEUE, CONSOLE)
+    // ============================================================================
+    function renderAll() {
+      const allQuadNodes = flattenQuadTree(quadRoot);
+      const searchAnalysis = searchRegionDetailed(quadRoot, searchRange);
+      const matchedPlotIds = new Set(searchAnalysis.results.map((p) => p.plotID));
+      const visitedNodeIds = new Set(searchAnalysis.visitedNodes.map((n) => n.id));
+      const maxTreeDepth = allQuadNodes.reduce((max, n) => Math.max(max, n.depth), 0);
+
+      // Build highest urgency map per plotID
+      const plotUrgencyMap = {};
+      advisoryQueue.forEach((adv) => {
+        if (!plotUrgencyMap[adv.plotID] || adv.urgency > plotUrgencyMap[adv.plotID]) {
+          plotUrgencyMap[adv.plotID] = adv.urgency;
+        }
+      });
+
+      // Top KPIs
+      document.getElementById('kpi-plots').textContent = plots.length;
+      document.getElementById('kpi-nodes').textContent = allQuadNodes.length;
+      document.getElementById('kpi-depth').textContent = `(D:${maxTreeDepth})`;
+      document.getElementById('kpi-in-range').textContent = searchAnalysis.results.length;
+      document.getElementById('kpi-queue').textContent = advisoryQueue.length;
+      document.getElementById('tab-tree-count').textContent = allQuadNodes.length;
+
+      // Render 2D SVG Map
+      renderSvgMap(allQuadNodes, visitedNodeIds, matchedPlotIds, plotUrgencyMap);
+
+      // Render Indexed Plots Pills
+      document.getElementById('indexed-plots-count').textContent = plots.length;
+      document.getElementById('indexed-plots-pills').innerHTML = plots
+        .map((p) => {
+          const urg = plotUrgencyMap[p.plotID] || 0;
+          const style = getUrgencyStyle(urg);
+          const isSel = selectedPlotId === p.plotID;
+          return `
+            <button
+              onclick="selectPlot(${p.plotID})"
+              class="px-2 py-1 rounded-lg text-[11px] font-mono border flex items-center gap-1.5 transition-all cursor-pointer ${
+                isSel
+                  ? 'bg-slate-800 border-emerald-400 text-white'
+                  : 'bg-slate-950/80 border-slate-800 text-slate-300 hover:border-slate-700'
+              }"
+            >
+              <span class="w-2 h-2 rounded-full ${style.bg}"></span>
+              <span>#${p.plotID}</span>
+              <span class="text-slate-500">(${p.pos.x.toFixed(0)},${p.pos.y.toFixed(0)})</span>
+            </button>
+          `;
+        })
+        .join('');
+
+      // Render Search Sliders & Results
+      document.getElementById('label-search-cx').textContent = searchRange.center.x.toFixed(1);
+      document.getElementById('label-search-cy').textContent = searchRange.center.y.toFixed(1);
+      document.getElementById('label-search-hd').textContent = searchRange.halfDim.toFixed(1);
+      document.getElementById('search-matched-count').textContent = searchAnalysis.results.length;
+      document.getElementById('search-pruning-stats').textContent =
+        `Visited ${searchAnalysis.visitedNodes.length}/${allQuadNodes.length} QuadNodes (${searchAnalysis.prunedNodes.length} pruned)`;
+
+      const resultsEl = document.getElementById('search-results-list');
+      if (searchAnalysis.results.length === 0) {
+        resultsEl.innerHTML = `
+          <div class="text-xs text-slate-500 font-mono py-2 text-center bg-slate-950/50 rounded-lg border border-slate-800/60">
+            No FarmPlot inside active Boundary range.
+          </div>
+        `;
+      } else {
+        resultsEl.innerHTML = searchAnalysis.results
+          .map(
+            (p) => `
+            <div onclick="selectPlot(${p.plotID})" class="px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs font-mono cursor-pointer hover:bg-amber-500/20">
+              <span class="text-amber-200 font-semibold">Found Farm Plot ID: ${p.plotID}</span>
+              <span class="text-amber-300/80">coords (${p.pos.x.toFixed(1)}, ${p.pos.y.toFixed(1)})</span>
+            </div>
+          `
+          )
+          .join('');
+      }
+
+      // Render Priority Queue
+      renderPriorityQueue();
+
+      // Render QuadNode Hierarchy Tree
+      document.getElementById('tree-visited-summary').textContent =
+        `Visited by search_region(): ${searchAnalysis.visitedNodes.length} / ${allQuadNodes.length} nodes`;
+      document.getElementById('tree-hierarchy-container').innerHTML = renderQuadTreeNodeHtml(quadRoot, visitedNodeIds);
+
+      // Render Console
+      renderConsole();
+    }
+
+    function renderSvgMap(allQuadNodes, visitedNodeIds, matchedPlotIds, plotUrgencyMap) {
+      const showSearchOverlay = document.getElementById('toggle-search-overlay').checked;
+      const showVisitedCells = document.getElementById('toggle-visited-cells').checked;
+
+      // 1. QuadNodes Layer
+      const nodesLayer = document.getElementById('svg-quadnodes-layer');
+      nodesLayer.innerHTML = allQuadNodes
+        .map((node) => {
+          const { center, halfDim } = node.boundary;
+          const svgX = center.x - halfDim;
+          const svgY = 100 - (center.y + halfDim);
+          const size = halfDim * 2;
+          const isVisited = visitedNodeIds.has(node.id);
+          const fill = showVisitedCells && isVisited ? 'rgba(245, 158, 11, 0.045)' : 'transparent';
+          const stroke = showVisitedCells && isVisited ? 'rgba(251, 191, 36, 0.45)' : 'rgba(52, 211, 153, 0.32)';
+          const sw = node.depth === 0 ? 0.6 : Math.max(0.18, 0.45 - node.depth * 0.06);
+
+          return `
+            <g>
+              <rect x="${svgX}" y="${svgY}" width="${size}" height="${size}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" />
+              ${
+                node.depth === 1
+                  ? `<text x="${svgX + 2}" y="${svgY + 4}" font-size="2.5" fill="rgba(148, 163, 184, 0.35)" font-family="monospace" font-weight="bold">${node.label}</text>`
+                  : ''
+              }
+            </g>
+          `;
+        })
+        .join('');
+
+      // 2. Search Area Layer
+      const searchLayer = document.getElementById('svg-search-layer');
+      if (showSearchOverlay) {
+        const sx = searchRange.center.x - searchRange.halfDim;
+        const sy = 100 - (searchRange.center.y + searchRange.halfDim);
+        const sSize = searchRange.halfDim * 2;
+        const labelX = Math.max(1, sx + 1.2);
+        const labelY = Math.max(3, sy + 3.2);
+        searchLayer.innerHTML = `
+          <rect x="${sx}" y="${sy}" width="${sSize}" height="${sSize}" fill="rgba(245, 158, 11, 0.12)" stroke="rgba(251, 191, 36, 0.9)" stroke-width="0.55" stroke-dasharray="1.5 1" />
+          <circle cx="${searchRange.center.x}" cy="${100 - searchRange.center.y}" r="0.8" fill="rgba(251, 191, 36, 0.9)" />
+          <text x="${labelX}" y="${labelY}" font-size="2.3" fill="#fbbf24" font-family="monospace" font-weight="bold">
+            searchArea (${searchRange.center.x.toFixed(0)},${searchRange.center.y.toFixed(0)} ±${searchRange.halfDim.toFixed(0)})
+          </text>
+        `;
+      } else {
+        searchLayer.innerHTML = '';
+      }
+
+      // 3. Farm Plots Layer
+      const plotsLayer = document.getElementById('svg-plots-layer');
+      plotsLayer.innerHTML = plots
+        .map((plot) => {
+          const svgX = plot.pos.x;
+          const svgY = 100 - plot.pos.y;
+          const isInsideSearch = showSearchOverlay && matchedPlotIds.has(plot.plotID);
+          const urgency = plotUrgencyMap[plot.plotID] || 0;
+          const isSelected = selectedPlotId === plot.plotID;
+          const style = getUrgencyStyle(urgency);
+
+          const tagX = svgX > 78 ? svgX - 19 : svgX + 2.4;
+          const tagY = svgY < 10 ? svgY + 3.5 : svgY - 1.5;
+          const strokeColor = isInsideSearch ? '#fbbf24' : isSelected ? '#34d399' : '#334155';
+
+          return `
+            <g onclick="event.stopPropagation(); selectPlot(${plot.plotID});" class="cursor-pointer">
+              ${
+                isInsideSearch
+                  ? `<circle cx="${svgX}" cy="${svgY}" r="3.8" fill="none" stroke="#fbbf24" stroke-width="0.45" stroke-dasharray="1 0.8" />`
+                  : ''
+              }
+              ${
+                urgency >= 8
+                  ? `<circle cx="${svgX}" cy="${svgY}" r="2.9" fill="rgba(244, 63, 94, 0.25)" />`
+                  : ''
+              }
+              <circle cx="${svgX}" cy="${svgY}" r="${isSelected ? '2.1' : '1.6'}" fill="${style.hex}" stroke="#0f172a" stroke-width="0.45" />
+              <g transform="translate(${tagX}, ${tagY})">
+                <rect x="0" y="-2.8" width="17.5" height="5.8" rx="1" fill="rgba(15, 23, 42, 0.88)" stroke="${strokeColor}" stroke-width="0.28" />
+                <text x="1" y="-0.3" font-size="2.05" font-weight="bold" font-family="monospace" fill="#f8fafc">
+                  #${plot.plotID} ${urgency > 0 ? `[U:${urgency}]` : ''}
+                </text>
+                <text x="1" y="2.1" font-size="1.75" font-family="monospace" fill="#94a3b8">
+                  (${plot.pos.x.toFixed(1)},${plot.pos.y.toFixed(1)})
+                </text>
+              </g>
+            </g>
+          `;
+        })
+        .join('');
+    }
+
+    function renderPriorityQueue() {
+      document.getElementById('pq-size-badge').innerHTML = `pq-&gt;size = ${advisoryQueue.length}`;
+      document.getElementById('btn-dispatch-advisory').disabled = advisoryQueue.length === 0;
+
+      // Last Dispatched Banner
+      const banner = document.getElementById('last-dispatched-banner');
+      if (lastDispatched) {
+        banner.className = 'mb-3 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs';
+        banner.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <div>
+              <span class="text-emerald-200 font-medium">Dispatched to Plot #${lastDispatched.plotID}</span>
+              <span class="ml-2 text-[11px] font-mono text-emerald-400">(Urgency: ${lastDispatched.urgency})</span>
+            </div>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">${lastDispatched.timestamp}</span>
+        `;
+      } else {
+        banner.className = 'hidden';
+      }
+
+      // Find maxIdx via linear search
+      let maxIdx = -1;
+      if (advisoryQueue.length > 0) {
+        maxIdx = 0;
+        for (let i = 1; i < advisoryQueue.length; i++) {
+          if (advisoryQueue[i].urgency > advisoryQueue[maxIdx].urgency) {
+            maxIdx = i;
+          }
+        }
+      }
+
+      document.getElementById('pq-array-header').innerHTML =
+        `pq-&gt;queue[0..${Math.max(0, advisoryQueue.length - 1)}] Array State:`;
+      document.getElementById('pq-maxidx-label').textContent =
+        maxIdx >= 0 ? `maxIdx = ${maxIdx}` : 'Empty';
+
+      const listEl = document.getElementById('pq-array-list');
+      if (advisoryQueue.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-xs text-slate-500 font-mono py-4 text-center bg-slate-950/50 rounded-lg border border-slate-800/60">
+            No active irrigation advisories in queue.
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = advisoryQueue
+        .map((item, idx) => {
+          const isMax = idx === maxIdx;
+          const style = getUrgencyStyle(item.urgency);
+          return `
+            <div class="px-3 py-2 rounded-lg border flex items-center justify-between text-xs font-mono transition-all ${
+              isMax
+                ? 'bg-rose-950/40 border-rose-500/60 text-white shadow-sm'
+                : 'bg-slate-950/70 border-slate-800 text-slate-300'
+            }">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-500">queue[${idx}]</span>
+                <span class="font-bold text-white">Plot #${item.plotID}</span>
+                ${
+                  isMax
+                    ? `<span class="px-1.5 py-0.5 text-[10px] rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-semibold">HIGHEST (maxIdx)</span>`
+                    : ''
+                }
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full ${style.bg}" style="width: ${(item.urgency / 10) * 100}%"></div>
+                </div>
+                <span class="px-1.5 py-0.5 rounded text-[11px] border ${style.badge}">U:${item.urgency}</span>
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function toggleTreeNodeCollapse(nodeId) {
+      if (collapsedTreeNodes.has(nodeId)) {
+        collapsedTreeNodes.delete(nodeId);
+      } else {
+        collapsedTreeNodes.add(nodeId);
+      }
+      renderAll();
+    }
+
+    function renderQuadTreeNodeHtml(node, visitedIds) {
+      if (!node) return '';
+      const hasChildren = node.NW !== null;
+      const isCollapsed = collapsedTreeNodes.has(node.id);
+      const isVisited = visitedIds.has(node.id);
+      const { center, halfDim } = node.boundary;
+      const xMin = (center.x - halfDim).toFixed(1);
+      const xMax = (center.x + halfDim).toFixed(1);
+      const yMin = (center.y - halfDim).toFixed(1);
+      const yMax = (center.y + halfDim).toFixed(1);
+
+      const badgeColors = {
+        ROOT: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        NW: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+        NE: 'bg-violet-500/20 text-violet-300 border-violet-500/40',
+        SW: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        SE: 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+      };
+
+      const isSelectedPlot = node.hasPlot && node.plot && node.plot.plotID === selectedPlotId;
+
+      return `
+        <div class="select-none text-xs">
+          <div
+            onclick="${
+              hasChildren
+                ? `toggleTreeNodeCollapse('${node.id}')`
+                : node.hasPlot && node.plot
+                ? `selectPlot(${node.plot.plotID})`
+                : ''
+            }"
+            class="flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-colors my-0.5 border ${
+              isSelectedPlot
+                ? 'bg-emerald-950/80 border-emerald-500/60'
+                : 'border-transparent hover:bg-slate-800/70'
+            }"
+          >
+            <span class="w-4 h-4 flex items-center justify-center text-slate-400 font-mono">
+              ${hasChildren ? (isCollapsed ? '▸' : '▾') : '•'}
+            </span>
+            <span class="px-1.5 py-0.5 text-[10px] font-mono font-bold rounded border ${
+              badgeColors[node.label] || badgeColors.ROOT
+            }">
+              ${node.label}
+            </span>
+            <span class="font-mono text-slate-400 text-[11px]">
+              [${xMin}..${xMax}, ${yMin}..${yMax}]
+            </span>
+            ${
+              isVisited
+                ? `<span class="px-1.5 py-0.2 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded text-[10px] font-mono">visited</span>`
+                : ''
+            }
+            ${
+              node.hasPlot === 1 && node.plot
+                ? `<span onclick="event.stopPropagation(); selectPlot(${node.plot.plotID});" class="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] font-semibold">
+                    Plot #${node.plot.plotID} (${node.plot.pos.x.toFixed(1)}, ${node.plot.pos.y.toFixed(1)})
+                  </span>`
+                : ''
+            }
+          </div>
+          ${
+            hasChildren && !isCollapsed
+              ? `<div class="pl-4 ml-2 border-l border-slate-800 space-y-0.5">
+                  ${renderQuadTreeNodeHtml(node.NW, visitedIds)}
+                  ${renderQuadTreeNodeHtml(node.NE, visitedIds)}
+                  ${renderQuadTreeNodeHtml(node.SW, visitedIds)}
+                  ${renderQuadTreeNodeHtml(node.SE, visitedIds)}
+                </div>`
+              : ''
+          }
+        </div>
+      `;
+    }
+
+    function renderConsole() {
+      const el = document.getElementById('tab-panel-console');
+      if (logs.length === 0) {
+        el.innerHTML = `<div class="text-slate-500">// Console cleared. Perform an operation to see live C stdout output.</div>`;
+        return;
+      }
+      el.innerHTML = logs
+        .map((entry) => {
+          const color =
+            entry.type === 'cmd'
+              ? 'text-sky-300'
+              : entry.type === 'stdout'
+              ? 'text-emerald-300 font-semibold'
+              : entry.type === 'warn'
+              ? 'text-amber-400'
+              : 'text-slate-400';
+          return `
+            <div class="leading-relaxed flex items-start gap-2">
+              <span class="text-slate-600 select-none">$</span>
+              <span class="${color}">${entry.text}</span>
+            </div>
+          `;
+        })
+        .join('');
+      el.scrollTop = el.scrollHeight;
+    }
+
+    // ============================================================================
+    // 6. SVG CANVAS MOUSE & CLICK LISTENERS
+    // ============================================================================
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      document.getElementById('c-source-code-block').textContent = ORIGINAL_C_SOURCE;
+
+      const svgEl = document.getElementById('quadtree-svg');
+      const cursorPill = document.getElementById('cursor-coords-pill');
+
+      svgEl.addEventListener('mousemove', (e) => {
+        const rect = svgEl.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+        const relY = (e.clientY - rect.top) / rect.height;
+        const coordX = Number(Math.max(0, Math.min(100, relX * 100)).toFixed(1));
+        const coordY = Number(Math.max(0, Math.min(100, (1 - relY) * 100)).toFixed(1));
+        cursorPill.textContent = `Cursor: X=${coordX.toFixed(1)}, Y=${coordY.toFixed(1)}`;
+        cursorPill.classList.remove('hidden');
+      });
+
+      svgEl.addEventListener('mouseleave', () => {
+        cursorPill.classList.add('hidden');
+      });
+
+      svgEl.addEventListener('click', (e) => {
+        const rect = svgEl.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+        const relY = (e.clientY - rect.top) / rect.height;
+        const coordX = Number(Math.max(0, Math.min(100, relX * 100)).toFixed(1));
+        const coordY = Number(Math.max(0, Math.min(100, (1 - relY) * 100)).toFixed(1));
+
+        if (canvasClickMode === 'insert') {
+          const nextId = Math.max(1000, ...plots.map((p) => p.plotID)) + 1;
+          const autoAdv = document.getElementById('auto-advisory-checkbox').checked;
+          const rUrg = autoAdv ? getRandomUrgency() : null;
+          document.getElementById('input-plot-x').value = coordX.toFixed(1);
+          document.getElementById('input-plot-y').value = coordY.toFixed(1);
+          if (rUrg !== null) document.getElementById('input-plot-urgency').value = rUrg;
+          insertPlotAndOptionalAdvisory(nextId, coordX, coordY, rUrg);
+        } else {
+          applySearchPreset(coordX, coordY, searchRange.halfDim);
+          appendLog(
+            'cmd',
+            `search_region(root, (Boundary){{${coordX.toFixed(1)}, ${coordY.toFixed(1)}}, ${searchRange.halfDim.toFixed(1)}});`
+          );
+        }
+      });
+
+      // Boot initial state from dsaia2.c main()
+      handleResetToMain();
+      populateAdvisorySelect(1002);
+    });
+  </script>
+</body>
+</html>
